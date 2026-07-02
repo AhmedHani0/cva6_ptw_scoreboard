@@ -1,0 +1,58 @@
+miss request starts
+  scoreboard remembers address, ASID, VMID, instruction/data side
+  scoreboard follows memory PTE responses
+  scoreboard predicts whether the PTW should:
+       1. issue another memory read,
+       2. produce a TLB update,
+       3. raise page fault,
+       4. raise access exception,
+       5. cancel due to flush.
+
+
+PTW state Machine :
+typedef enum logic [2:0] {
+  SB_IDLE,
+  SB_WALKING,
+  SB_WAIT_PTE,
+  SB_EXPECT_UPDATE,
+  SB_EXPECT_ERROR,
+  SB_KILLED
+} sb_state_e;
+
+SB_IDLE
+  No active tracked PTW transaction.
+
+SB_WALKING
+  A shared-TLB miss was accepted and a page walk is active.
+
+SB_WAIT_PTE
+  A page-table memory request was issued; scoreboard waits for returned PTE.
+
+SB_EXPECT_UPDATE
+  Scoreboard saw a legal leaf PTE and expects shared_tlb_update_o.valid.
+
+SB_EXPECT_ERROR
+  Scoreboard saw an invalid/illegal PTE and expects ptw_error_o or ptw_access_exception_o.
+
+SB_KILLED
+  Flush aborted the walk; scoreboard expects no useful update from this old walk.
+
+
+
+
+the scenario of  PTW  from what i understand is as follows: SHARED TLB miss, PTW requests the data from memory, waits for gnt, get back from the memory.
+Now as a senior proffessional design verification engineer, who needs to apply the scoreboard methodology on different buffer like structures and who is trying to apply this to the MMU but doing it on one design at a time starting from the tlb, the shared tlnb and now the PTW , and you wanna reach a template or methodology which can be applied to all such designs, in a minimal abstract way just considering the normal RTL behaviour and interface of the design (inputs, outputs, and so on) that can be reapplied to different designs, with changing some paraameters or some config in the config pkg. lets create the environment as previously done with tlb, shared tlb , go through the RTL design, make sure my understanding is the right one, gather all the main important RTL details and interface, summarize it, and saummarize the behaviour for me to create the documentation for me, then start creating a tcl script with all the needed dependencies like the tcl attached for the shared tlb , then create the formal pkg, the formal top and the abstract scoreboard as follows:
+the scoreboard will be a Compact FSM (that memics the rtl design in a simple compact and abstract way) system always response to a req given fairness contsraints on the memory, it will prove the following properties which were discussed with Lucas my superviosr after walking roughly through the design.
+
+1st propery : lIVENESS . THERE MUST BE PROGRESSS
+
+2nd property (main one): WHAT GETS INSIDE THE PTW FROM THE DATA CACHE MUST BE WHAT GOES OUT TO THE SHARED TLB
+NO PMP FUNCTIONALITY VERIFICATION (so this is also considered data integrity, when a req come (which is i/dtlb miss and then a req to the mem cache, we track this request, and make sure that this tracked request is the one forwarded from the memory as an update to the corresponding tlb which missed
+in other words what returned from the memory is what forwarded to TLB
+
+3rd property if there is no req, no response but this can be implicitly covered by the state machine
+inide the fsm if a kill comes, we go to kill state
+
+4th property no two misses at the same time of the itlb and dtlb
+
+two versions of the properties for itlb and dtlb
